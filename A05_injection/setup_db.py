@@ -1,7 +1,11 @@
 import sqlite3
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+DB_PATH = BASE_DIR / 'users.db'
 
 # Create database and users table
-conn = sqlite3.connect('users.db')
+conn = sqlite3.connect(DB_PATH)
 cursor = conn.cursor()
 
 # Create users table

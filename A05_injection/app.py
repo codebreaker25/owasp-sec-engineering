@@ -1,46 +1,63 @@
-from flask import Flask, request, render_template_string
+from fastapi import FastAPI, Form
+from fastapi.responses import HTMLResponse, PlainTextResponse
 import sqlite3
+from pathlib import Path
+import uvicorn
 
-conn = sqlite3.connect('users.db', check_same_thread=False)
+BASE_DIR = Path(__file__).resolve().parent
+DB_PATH = BASE_DIR / "users.db"
+
+conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 cursor = conn.cursor()
 
-app = Flask(__name__)
+app = FastAPI()
 
-@app.route('/')
-def login():
-    return '''
-        <form action="/login" method="post">
-            <input type="text" name="username" placeholder="Username">
-            <input type="password" name="password" placeholder="Password">
-            <input type="submit" value="Login">
-        </form>
-    '''
-@app.route('/login', methods=['POST'])
-def login_post():    
-    username = request.form['username']
-    password = request.form['password']
-    
-    # Intentionally vulnerable - concatenates user input directly
+def login_form(action: str, title: str):
+    return f"""
+    <h2>{title}</h2>
+    <form action="{action}" method="post">
+        <input type="text" name="username" placeholder="Username">
+        <input type="password" name="password" placeholder="Password">
+        <input type="submit" value="Login">
+    </form>
+    <p><a href="/">Back</a></p>
+    """
+
+@app.get("/", response_class=HTMLResponse)
+def home():
+    return """
+    <h1>SQL Injection Demo</h1>
+    <ul>
+      <li><a href="/vulnerable">Vulnerable Login</a></li>
+      <li><a href="/fixed">Fixed Login</a></li>
+    </ul>
+    """
+
+@app.get("/vulnerable", response_class=HTMLResponse)
+def vulnerable_page():
+    return login_form("/vulnerable", "Vulnerable Login")
+
+@app.post("/vulnerable", response_class=PlainTextResponse)
+def vulnerable_login(username: str = Form(...), password: str = Form(...)):
     query = f"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'"
-    
-    # Execute the vulnerable query
     cursor.execute(query)
     results = cursor.fetchall()
-    print("Query results:", results)
-    
     if results:
-        print("Executing query:", query)
-        return "Login successful!"
-        return str(results)
+        return "Login successful! (vulnerable)"
+    return "Invalid credentials. (vulnerable)"
 
-    else:
-        print("Executing query:", query)
-        return "Invalid credentials."
-    
-    
+@app.get("/fixed", response_class=HTMLResponse)
+def fixed_page():
+    return login_form("/fixed", "Fixed Login")
+
+@app.post("/fixed", response_class=PlainTextResponse)
+def fixed_login(username: str = Form(...), password: str = Form(...)):
+    query = "SELECT * FROM users WHERE username = ? AND password = ?"
+    cursor.execute(query, (username, password))
+    results = cursor.fetchall()
+    if results:
+        return "Login successful! (fixed)"
+    return "Invalid credentials. (fixed)"
 
 if __name__ == "__main__":
-    app.run(debug=True)
-
-
-
+    uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)

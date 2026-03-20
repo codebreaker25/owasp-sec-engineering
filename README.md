@@ -4,18 +4,19 @@ A collection of security engineering examples and demonstrations for OWASP Top 1
 
 ## A05 - Injection
 
-This module demonstrates SQL injection vulnerabilities and their mitigations.
+This module demonstrates SQL injection vulnerabilities and mitigations using a FastAPI login demo.
 
 ### Files
 
-- `app.py` - Flask application with SQL injection examples
-- `setup_db.py` - Database setup script
+- `A05_injection/app.py` - FastAPI app with both vulnerable and fixed login flows
+- `A05_injection/setup_db.py` - SQLite database setup script
+- `A05_injection/users.db` - Local demo database
 
 ### Setup
 
 1. Install dependencies:
 ```bash
-pip install flask
+python -m pip install "fastapi[standard]"
 ```
 
 2. Initialize the database:
@@ -25,8 +26,37 @@ python A05_injection/setup_db.py
 
 3. Run the application:
 ```bash
-python A05_injection/app.py
+cd A05_injection
+uvicorn app:app --reload
 ```
+
+4. Open:
+```text
+http://127.0.0.1:8000
+```
+
+### Demo Routes
+
+- `/vulnerable` - intentionally vulnerable SQL query built with string concatenation
+- `/fixed` - protected SQL query using parameterized statements
+
+### Test Credentials
+
+- `admin / admin123`
+- `user / password`
+- `test / test123`
+
+### SQL Injection Demonstration
+
+Use this payload in the vulnerable login form to demonstrate bypass behavior:
+
+- Username: `' OR '1'='1`
+- Password: `anything`
+
+Expected result:
+
+- `/vulnerable` may allow bypass
+- `/fixed` rejects the payload
 
 ### Security Notes
 
